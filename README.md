@@ -13,7 +13,8 @@ Paste a link, pick a quality, download.
 ## Requirements
 
 - Python 3.9+
-- [ffmpeg](https://ffmpeg.org/) on PATH (needed for HD merging and MP3 conversion)
+- [ffmpeg](https://ffmpeg.org/) (needed for HD merging and MP3 conversion)
+- [Node.js](https://nodejs.org/) or [Deno](https://deno.com/) (yt-dlp needs a JavaScript runtime for YouTube)
 
 ## Run
 
