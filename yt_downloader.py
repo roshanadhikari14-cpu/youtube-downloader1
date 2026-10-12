@@ -1,9 +1,11 @@
 """YouTube Downloader - a small desktop GUI around yt-dlp.
 
 Run:  python yt_downloader.py
-Needs: pip install yt-dlp   (and ffmpeg on PATH for merging / MP3)
+Needs: pip install "yt-dlp[default]", ffmpeg (merging / MP3) and Node.js or Deno
 """
 
+import glob
+import os
 import queue
 import shutil
 import threading
@@ -23,7 +25,38 @@ QUALITIES = {
     "Audio only (MP3)": "audio",
 }
 
-HAS_FFMPEG = shutil.which("ffmpeg") is not None
+
+def find_ffmpeg():
+    """Locate ffmpeg even when this process started with an out-of-date PATH."""
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    if os.name != "nt":
+        return None
+    # PATH as currently saved in Windows (ours may predate an ffmpeg install/upgrade).
+    import winreg
+    dirs = []
+    for root, key in (
+        (winreg.HKEY_CURRENT_USER, "Environment"),
+        (winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
+    ):
+        try:
+            with winreg.OpenKey(root, key) as k:
+                dirs += os.path.expandvars(winreg.QueryValueEx(k, "Path")[0]).split(os.pathsep)
+        except OSError:
+            pass
+    found = shutil.which("ffmpeg", path=os.pathsep.join(dirs))
+    if found:
+        return found
+    # winget installs ffmpeg under a versioned folder; take the newest.
+    pattern = os.path.expandvars(
+        r"%LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe")
+    matches = sorted(glob.glob(pattern), key=os.path.getmtime)
+    return matches[-1] if matches else None
+
+
+FFMPEG = find_ffmpeg()
+HAS_FFMPEG = FFMPEG is not None
 
 
 def build_options(quality, out_dir, playlist=False, progress_hook=None):
@@ -35,7 +68,11 @@ def build_options(quality, out_dir, playlist=False, progress_hook=None):
         "quiet": True,
         "no_warnings": True,
         "windowsfilenames": True,
+        # YouTube needs a JavaScript runtime; yt-dlp only looks for deno unless told otherwise.
+        "js_runtimes": {"deno": {}, "node": {}},
     }
+    if HAS_FFMPEG:
+        opts["ffmpeg_location"] = FFMPEG
     if progress_hook:
         opts["progress_hooks"] = [progress_hook]
 
