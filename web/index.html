@@ -6,104 +6,277 @@
 <title>YouTube Downloader</title>
 <style>
   :root {
-    --bg: #f5f6f8; --card: #ffffff; --text: #16181d; --muted: #666c78;
-    --line: #dcdfe5; --accent: #d93025; --accent-text: #ffffff; --ok: #1a7f37; --track: #e6e8ec;
+    --bg: #f4f5f9; --glow: rgba(255, 78, 69, .16); --glow2: rgba(255, 170, 60, .14);
+    --card: #ffffff; --card2: #f7f8fb; --text: #14161c; --muted: #646b7a; --line: #e2e5ec;
+    --accent: #e5322d; --accent2: #ff7a3d; --on-accent: #ffffff; --ok: #188a42;
+    --track: #e8eaf0; --shadow: 0 10px 30px rgba(20, 22, 28, .08);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #111317; --card: #1b1e24; --text: #eceef2; --muted: #9aa1ad;
-      --line: #2e323b; --accent: #ef5350; --accent-text: #111317; --ok: #4cc26a; --track: #2a2e36;
+      --bg: #0d0e12; --glow: rgba(255, 78, 69, .20); --glow2: rgba(255, 150, 60, .10);
+      --card: #17191f; --card2: #1e2129; --text: #f0f2f6; --muted: #979eac; --line: #2a2e38;
+      --accent: #ff4e45; --accent2: #ff8a4c; --on-accent: #14161c; --ok: #4ed37c;
+      --track: #262a33; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
     }
   }
   * { box-sizing: border-box; }
+  html { background: var(--bg); }
   body {
-    margin: 0; padding: 32px 16px; background: var(--bg); color: var(--text);
-    font: 16px/1.5 "Segoe UI", system-ui, sans-serif;
+    margin: 0; min-height: 100vh; padding: 48px 16px 64px; color: var(--text);
+    font: 16px/1.5 "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    background:
+      radial-gradient(600px 320px at 15% -5%, var(--glow), transparent 70%),
+      radial-gradient(560px 300px at 90% 0%, var(--glow2), transparent 70%);
+    background-repeat: no-repeat;
   }
-  main { max-width: 640px; margin: 0 auto; }
-  h1 { font-size: 26px; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; overflow-wrap: anywhere; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
-  label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 6px; }
-  input[type=url], select {
-    width: 100%; padding: 11px 12px; font: inherit; color: var(--text);
-    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  main { max-width: 760px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 28px; }
+  .logo {
+    width: 60px; height: 42px; border-radius: 13px; margin: 0 auto 16px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 8px 22px var(--glow);
   }
-  input[type=url]:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .row { display: flex; gap: 12px; align-items: flex-end; margin-top: 14px; flex-wrap: wrap; }
-  .row > div { flex: 1 1 180px; }
-  .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; }
-  button {
-    padding: 11px 22px; font: inherit; font-weight: 600; cursor: pointer;
-    color: var(--accent-text); background: var(--accent); border: 0; border-radius: 8px;
+  .logo::after {
+    content: ""; border-style: solid; border-width: 9px 0 9px 15px; margin-left: 3px;
+    border-color: transparent transparent transparent #fff;
   }
+  h1 { font-size: clamp(28px, 6vw, 40px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -.02em; }
+  h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { color: var(--muted); margin: 0; font-size: 15px; }
+
+  .search {
+    display: flex; gap: 8px; padding: 8px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; box-shadow: var(--shadow);
+  }
+  .search:focus-within { border-color: var(--accent); }
+  .search input {
+    flex: 1; min-width: 0; padding: 12px 14px; font: inherit; color: var(--text);
+    background: transparent; border: 0; outline: 0;
+  }
+  .search input::placeholder { color: var(--muted); }
+  button { font: inherit; font-weight: 600; cursor: pointer; border: 0; border-radius: 11px; }
   button:disabled { opacity: .55; cursor: default; }
-  .msg { color: var(--accent); font-size: 14px; margin: 12px 0 0; min-height: 21px; }
-  h2 { font-size: 15px; margin: 28px 0 10px; color: var(--muted); font-weight: 600; }
-  .job { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
-  .job .title { font-weight: 600; overflow-wrap: anywhere; }
+  button:focus-visible, .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .primary {
+    padding: 12px 22px; color: var(--on-accent); white-space: nowrap;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+  }
+  .primary:not(:disabled):hover { filter: brightness(1.07); }
+  .options { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 12px 6px 0; font-size: 14px; color: var(--muted); }
+  .options label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .options input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .folder { overflow-wrap: anywhere; }
+  .msg { color: var(--accent); font-size: 14px; margin: 12px 6px 0; min-height: 21px; overflow-wrap: anywhere; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+  #preview { margin-top: 20px; padding: 18px; }
+  .video { display: grid; grid-template-columns: 300px 1fr; gap: 18px; align-items: start; }
+  .thumb { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: var(--track); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .badge {
+    position: absolute; right: 8px; bottom: 8px; padding: 2px 7px; border-radius: 6px;
+    background: rgba(0, 0, 0, .78); color: #fff; font-size: 12px; font-weight: 600;
+  }
+  .video h2 { font-size: 19px; line-height: 1.3; margin: 2px 0 6px; overflow-wrap: anywhere; }
+  .by { color: var(--muted); font-size: 14px; margin: 0; overflow-wrap: anywhere; }
+  .section { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 20px 0 10px; }
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; }
+  .chip { position: relative; cursor: pointer; }
+  .chip input { position: absolute; opacity: 0; inset: 0; }
+  .chip span {
+    display: block; padding: 11px 12px; border-radius: 12px; border: 1.5px solid var(--line);
+    background: var(--card2); transition: border-color .15s, transform .15s;
+  }
+  .chip:hover span { transform: translateY(-1px); border-color: var(--muted); }
+  .chip input:checked + span { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  .chip b { display: flex; align-items: center; gap: 6px; font-size: 16px; }
+  .chip em {
+    font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 1px 5px; border-radius: 5px;
+    color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent2));
+  }
+  .chip small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .actions { display: flex; justify-content: flex-end; margin-top: 18px; }
+  .actions .primary { padding: 13px 28px; }
+
+  .skeleton { height: 150px; border-radius: 12px; background: linear-gradient(90deg, var(--track) 25%, var(--card2) 50%, var(--track) 75%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  .list-title { margin: 34px 4px 12px; }
+  .job { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: center; padding: 12px; margin-bottom: 10px; }
+  .job .thumb { border-radius: 9px; }
+  .job .title { font-weight: 600; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .job .meta { font-size: 13px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; }
   .job.done .meta { color: var(--ok); }
   .job.error .meta { color: var(--accent); }
-  .bar { height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; margin-top: 10px; }
-  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  .bar { height: 7px; background: var(--track); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .bar > i { display: block; height: 100%; width: 0; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s; }
   .job.done .bar > i { background: var(--ok); }
-  .empty { color: var(--muted); font-size: 14px; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 22px; border: 1.5px dashed var(--line); border-radius: 16px; }
+  [hidden] { display: none !important; }
+
+  @media (max-width: 640px) {
+    body { padding-top: 32px; }
+    .video { grid-template-columns: 1fr; }
+    .search { flex-direction: column; }
+    .job { grid-template-columns: 88px 1fr; }
+    .actions .primary { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
 <main>
-  <h1>YouTube Downloader</h1>
-  <p class="sub" id="folder">&nbsp;</p>
+  <header>
+    <div class="logo" aria-hidden="true"></div>
+    <h1>YouTube <span>Downloader</span></h1>
+    <p class="sub">Paste a link, pick a resolution, save it to your computer.</p>
+  </header>
 
-  <form class="card" id="form">
-    <label for="url">Video URL</label>
-    <input type="url" id="url" placeholder="https://www.youtube.com/watch?v=..." required autofocus>
-    <div class="row">
-      <div>
-        <label for="quality">Quality</label>
-        <select id="quality"></select>
-      </div>
-      <button type="submit" id="go">Download</button>
+  <form id="lookup">
+    <div class="search">
+      <input type="url" id="url" aria-label="Video link" placeholder="Paste a YouTube link..." required autofocus>
+      <button class="primary" type="submit" id="find">Get video</button>
     </div>
-    <label class="check"><input type="checkbox" id="playlist"> Download whole playlist</label>
+    <div class="options">
+      <label><input type="checkbox" id="playlist"> Download whole playlist</label>
+      <span class="folder" id="folder"></span>
+    </div>
     <p class="msg" id="msg" role="alert"></p>
   </form>
 
-  <h2>Downloads</h2>
-  <div id="jobs"><p class="empty">Nothing yet. Paste a link above.</p></div>
+  <section class="card" id="preview" hidden></section>
+
+  <h2 class="section list-title">Downloads</h2>
+  <div id="jobs"><p class="empty">Your downloads will show up here.</p></div>
 </main>
 
 <script>
 const $ = (id) => document.getElementById(id);
+const TAGS = { 4320: "8K", 2160: "4K", 1440: "2K", 1080: "FHD", 720: "HD" };
 let timer = null;
+let current = null;  // the link the preview card is showing
 
-async function loadConfig() {
-  const cfg = await (await fetch("/api/config")).json();
-  for (const q of cfg.qualities) $("quality").add(new Option(q, q));
-  $("folder").textContent = "Files are saved to " + cfg.folder;
-  if (!cfg.ffmpeg) $("msg").textContent = "ffmpeg not found - HD merging and MP3 conversion are disabled.";
+function el(tag, props = {}, ...children) {
+  const node = Object.assign(document.createElement(tag), props);
+  node.append(...children);
+  return node;
+}
+
+function size(bytes) {
+  if (!bytes) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let i = 0;
+  while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+  return "~" + bytes.toFixed(bytes >= 100 || i < 2 ? 0 : 1) + " " + units[i];
+}
+
+function clock(seconds) {
+  if (!seconds) return "";
+  const s = Math.round(seconds), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  const pad = (n) => String(n).padStart(2, "0");
+  return (h ? h + ":" + pad(m) : m) + ":" + pad(s % 60);
+}
+
+function thumb(src, badge) {
+  const box = el("div", { className: "thumb" });
+  if (src && src.startsWith("https://")) {
+    const img = el("img", { src, alt: "", loading: "lazy", referrerPolicy: "no-referrer" });
+    img.onerror = () => img.remove();
+    box.append(img);
+  }
+  if (badge) box.append(el("span", { className: "badge", textContent: badge }));
+  return box;
+}
+
+function chip(value, label, tag, detail, checked) {
+  const input = el("input", { type: "radio", name: "quality", value, checked });
+  const name = el("b", {}, label);
+  if (tag) name.append(el("em", { textContent: tag }));
+  return el("label", { className: "chip" }, input, el("span", {}, name, el("small", { textContent: detail })));
+}
+
+function showPreview(info) {
+  const box = $("preview");
+  const isList = info.kind === "playlist";
+  const byline = [info.uploader, isList ? info.count + " videos" : ""].filter(Boolean).join(" - ");
+  const head = el("div", { className: "video" },
+    thumb(info.thumbnail, isList ? "Playlist" : clock(info.duration)),
+    el("div", {}, el("h2", { textContent: info.title }), el("p", { className: "by", textContent: byline })));
+
+  // Preselect 1080p, or the closest resolution below it, or the highest on offer.
+  const heights = info.options.map((o) => o.height);
+  const preferred = heights.find((h) => h <= 1080) ?? heights[0];
+  const chips = el("div", { className: "chips" });
+  for (const o of info.options) {
+    const detail = isList ? "up to " + o.height + "p" : [o.fps > 30 ? o.fps + " fps" : "", size(o.size)].filter(Boolean).join(" - ") || "MP4";
+    chips.append(chip(String(o.height), o.label, TAGS[o.height], detail, o.height === preferred));
+  }
+  if (!info.options.length) chips.append(chip("best", "Best", "", "best available", true));
+  chips.append(chip("audio", "MP3", "", ["audio only", size(info.audio.size)].filter(Boolean).join(" - "), false));
+
+  const go = el("button", { className: "primary", type: "button", textContent: "Download" });
+  go.onclick = () => startDownload(go);
+  const count = info.options.length;
+  box.replaceChildren(head,
+    el("div", { className: "section", textContent: isList ? "Resolution" : count + " resolution" + (count === 1 ? "" : "s") + " available" }),
+    chips, el("div", { className: "actions" }, go));
+  box.hidden = false;
+}
+
+async function post(path, body) {
+  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+}
+
+$("lookup").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const request = { url: $("url").value.trim(), playlist: $("playlist").checked };
+  $("msg").textContent = "";
+  $("find").disabled = true;
+  $("find").textContent = "Looking...";
+  $("preview").replaceChildren(el("div", { className: "skeleton" }));
+  $("preview").hidden = false;
+  try {
+    showPreview(await post("/api/info", request));
+    current = request;
+  } catch (err) {
+    $("preview").hidden = true;
+    $("msg").textContent = err instanceof TypeError ? "Can't reach the app. Is it still running?" : err.message;
+  } finally {
+    $("find").disabled = false;
+    $("find").textContent = "Get video";
+  }
+});
+
+async function startDownload(button) {
+  const picked = document.querySelector("input[name=quality]:checked").value;
+  const quality = picked === "audio" || picked === "best" ? picked : Number(picked);
+  button.disabled = true;
+  try {
+    await post("/api/download", { ...current, quality });
+    await poll();
+    if (!timer) timer = setInterval(poll, 700);
+    $("jobs").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (err) {
+    $("msg").textContent = err instanceof TypeError ? "Can't reach the app. Is it still running?" : err.message;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function render(jobs) {
-  const box = $("jobs");
   if (!jobs.length) return;
-  box.replaceChildren(...jobs.slice().reverse().map((j) => {
-    const el = document.createElement("div");
-    el.className = "job " + j.status;
-    const title = document.createElement("div");
-    title.className = "title";
-    title.textContent = j.title || j.url;
-    const bar = document.createElement("div");
-    bar.className = "bar";
-    const fill = document.createElement("i");
+  $("jobs").replaceChildren(...jobs.slice().reverse().map((j) => {
+    const fill = el("i");
     fill.style.width = (j.status === "error" ? 0 : j.percent) + "%";
-    bar.append(fill);
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    meta.textContent = j.quality + " - " + j.text;
-    el.append(title, bar, meta);
-    return el;
+    return el("div", { className: "card job " + j.status },
+      thumb(j.thumbnail, j.quality),
+      el("div", {},
+        el("div", { className: "title", textContent: j.title || j.url }),
+        el("div", { className: "bar" }, fill),
+        el("div", { className: "meta", textContent: j.text })));
   }));
 }
 
@@ -112,31 +285,15 @@ async function poll() {
   render(jobs);
   const active = jobs.some((j) => j.status !== "done" && j.status !== "error");
   if (!active && timer) { clearInterval(timer); timer = null; }
+  if (active && !timer) timer = setInterval(poll, 700);
 }
 
-$("form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  $("msg").textContent = "";
-  $("go").disabled = true;
-  try {
-    const res = await fetch("/api/download", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: $("url").value, quality: $("quality").value, playlist: $("playlist").checked }),
-    });
-    const data = await res.json();
-    if (!res.ok) { $("msg").textContent = data.error || "Something went wrong."; return; }
-    $("url").value = "";
-    await poll();
-    if (!timer) timer = setInterval(poll, 700);
-  } catch (err) {
-    $("msg").textContent = "Can't reach the app. Is it still running?";
-  } finally {
-    $("go").disabled = false;
-  }
-});
-
-loadConfig().then(poll);
+(async () => {
+  const cfg = await (await fetch("/api/config")).json();
+  $("folder").textContent = "Saving to " + cfg.folder;
+  if (!cfg.ffmpeg) $("msg").textContent = "ffmpeg not found - HD merging and MP3 conversion are disabled.";
+  poll();
+})();
 </script>
 </body>
 </html>

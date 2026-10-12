@@ -60,8 +60,11 @@ HAS_FFMPEG = FFMPEG is not None
 
 
 def build_options(quality, out_dir, playlist=False, progress_hook=None):
-    """Translate the GUI choices into a yt-dlp options dict."""
-    choice = QUALITIES[quality]
+    """Translate the GUI choices into a yt-dlp options dict.
+
+    quality is a QUALITIES label, or directly a max height / None / "audio".
+    """
+    choice = QUALITIES[quality] if quality in QUALITIES else quality
     opts = {
         "outtmpl": str(Path(out_dir) / "%(title)s.%(ext)s"),
         "noplaylist": not playlist,
