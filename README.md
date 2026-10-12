@@ -1,6 +1,10 @@
 # YouTube Downloader
 
-A small Windows desktop app (Python + Tkinter) built on [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+A small YouTube downloader built on [yt-dlp](https://github.com/yt-dlp/yt-dlp), in two flavours:
+
+- **Desktop app** (Python + Tkinter): `yt_downloader.py`
+- **Web app** that runs on your own computer and opens in your browser: `web_app.py`
+
 Paste a link, pick a quality, download.
 
 ## Features
@@ -24,6 +28,16 @@ python yt_downloader.py
 ```
 
 On Windows you can also double-click `run.bat`, which updates yt-dlp and opens the app.
+
+### Web version
+
+```bash
+python web_app.py
+```
+
+or double-click `run_web.bat`. The page opens at http://localhost:8765 and files are saved to
+your Downloads folder (`--dir` changes the folder, `--port` the port). The server only answers
+on localhost, so it is not reachable from other devices.
 
 ## Note
 

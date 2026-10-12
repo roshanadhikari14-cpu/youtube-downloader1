@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YouTube Downloader</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #16181d; --muted: #666c78;
+    --line: #dcdfe5; --accent: #d93025; --accent-text: #ffffff; --ok: #1a7f37; --track: #e6e8ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111317; --card: #1b1e24; --text: #eceef2; --muted: #9aa1ad;
+      --line: #2e323b; --accent: #ef5350; --accent-text: #111317; --ok: #4cc26a; --track: #2a2e36;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 16px; background: var(--bg); color: var(--text);
+    font: 16px/1.5 "Segoe UI", system-ui, sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; overflow-wrap: anywhere; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 6px; }
+  input[type=url], select {
+    width: 100%; padding: 11px 12px; font: inherit; color: var(--text);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  input[type=url]:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row { display: flex; gap: 12px; align-items: flex-end; margin-top: 14px; flex-wrap: wrap; }
+  .row > div { flex: 1 1 180px; }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; }
+  button {
+    padding: 11px 22px; font: inherit; font-weight: 600; cursor: pointer;
+    color: var(--accent-text); background: var(--accent); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .55; cursor: default; }
+  .msg { color: var(--accent); font-size: 14px; margin: 12px 0 0; min-height: 21px; }
+  h2 { font-size: 15px; margin: 28px 0 10px; color: var(--muted); font-weight: 600; }
+  .job { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+  .job .title { font-weight: 600; overflow-wrap: anywhere; }
+  .job .meta { font-size: 13px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; }
+  .job.done .meta { color: var(--ok); }
+  .job.error .meta { color: var(--accent); }
+  .bar { height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; margin-top: 10px; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  .job.done .bar > i { background: var(--ok); }
+  .empty { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>YouTube Downloader</h1>
+  <p class="sub" id="folder">&nbsp;</p>
+
+  <form class="card" id="form">
+    <label for="url">Video URL</label>
+    <input type="url" id="url" placeholder="https://www.youtube.com/watch?v=..." required autofocus>
+    <div class="row">
+      <div>
+        <label for="quality">Quality</label>
+        <select id="quality"></select>
+      </div>
+      <button type="submit" id="go">Download</button>
+    </div>
+    <label class="check"><input type="checkbox" id="playlist"> Download whole playlist</label>
+    <p class="msg" id="msg" role="alert"></p>
+  </form>
+
+  <h2>Downloads</h2>
+  <div id="jobs"><p class="empty">Nothing yet. Paste a link above.</p></div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let timer = null;
+
+async function loadConfig() {
+  const cfg = await (await fetch("/api/config")).json();
+  for (const q of cfg.qualities) $("quality").add(new Option(q, q));
+  $("folder").textContent = "Files are saved to " + cfg.folder;
+  if (!cfg.ffmpeg) $("msg").textContent = "ffmpeg not found - HD merging and MP3 conversion are disabled.";
+}
+
+function render(jobs) {
+  const box = $("jobs");
+  if (!jobs.length) return;
+  box.replaceChildren(...jobs.slice().reverse().map((j) => {
+    const el = document.createElement("div");
+    el.className = "job " + j.status;
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = j.title || j.url;
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    const fill = document.createElement("i");
+    fill.style.width = (j.status === "error" ? 0 : j.percent) + "%";
+    bar.append(fill);
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = j.quality + " - " + j.text;
+    el.append(title, bar, meta);
+    return el;
+  }));
+}
+
+async function poll() {
+  const { jobs } = await (await fetch("/api/jobs")).json();
+  render(jobs);
+  const active = jobs.some((j) => j.status !== "done" && j.status !== "error");
+  if (!active && timer) { clearInterval(timer); timer = null; }
+}
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("msg").textContent = "";
+  $("go").disabled = true;
+  try {
+    const res = await fetch("/api/download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: $("url").value, quality: $("quality").value, playlist: $("playlist").checked }),
+    });
+    const data = await res.json();
+    if (!res.ok) { $("msg").textContent = data.error || "Something went wrong."; return; }
+    $("url").value = "";
+    await poll();
+    if (!timer) timer = setInterval(poll, 700);
+  } catch (err) {
+    $("msg").textContent = "Can't reach the app. Is it still running?";
+  } finally {
+    $("go").disabled = false;
+  }
+});
+
+loadConfig().then(poll);
+</script>
+</body>
+</html>
